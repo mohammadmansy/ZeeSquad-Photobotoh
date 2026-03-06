@@ -6,7 +6,7 @@ using System.IO;
 using UnityEngine.Networking;
 using System.Diagnostics;
 using Debug = UnityEngine.Debug;
-public class ZeeSquadPhotobooth : MonoBehaviour
+public class Manager : MonoBehaviour
 {
     // PANELS
     public GameObject startPanel;
