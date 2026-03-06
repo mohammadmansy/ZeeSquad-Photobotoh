@@ -4,7 +4,8 @@ using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using UnityEngine.Networking;
-
+using System.Diagnostics;
+using Debug = UnityEngine.Debug;
 public class ZeeSquadPhotobooth : MonoBehaviour
 {
     // PANELS
@@ -33,8 +34,6 @@ public class ZeeSquadPhotobooth : MonoBehaviour
     public Sprite[] frameSprites;
     private int selectedFrame = 0;
 
-    // RESULT
-    public RawImage capturedPhoto;
     public RawImage qrImage;
 
     // AUDIO
@@ -88,8 +87,11 @@ public class ZeeSquadPhotobooth : MonoBehaviour
         resultPanel.SetActive(false);
 
         panel.SetActive(true);
-    }
 
+        bool enableFrames = (lastPhoto != null && panel == framePanel);
+        foreach (var btn in frameButtons)
+            btn.interactable = enableFrames;
+    }
     // CAMERA
     IEnumerator StartCamera()
     {
@@ -174,11 +176,15 @@ public class ZeeSquadPhotobooth : MonoBehaviour
 
     IEnumerator ProcessPhoto()
     {
+        if (lastPhoto == null)
+        {
+            Debug.LogError("No photo captured yet! Cannot apply frame.");
+            yield break;
+        }
+
         Texture2D finalPhoto = ApplyFrame(lastPhoto, selectedFrame);
 
         SavePhoto(finalPhoto);
-
-        capturedPhoto.texture = finalPhoto;
 
         ShowPanel(resultPanel);
 
@@ -258,7 +264,7 @@ public class ZeeSquadPhotobooth : MonoBehaviour
 
         WWWForm form = new WWWForm();
 
-        form.AddField("key", "YOUR_IMGBB_KEY");
+        form.AddField("key", "5090363c5e3c49709fa7be1a2960e69a");
         form.AddField("image", base64);
 
         UnityWebRequest www = UnityWebRequest.Post("https://api.imgbb.com/1/upload", form);
@@ -312,17 +318,35 @@ public class ZeeSquadPhotobooth : MonoBehaviour
     // PRINT
     void PrintPhoto()
     {
-        if (savedPhotos.Count == 0) return;
+        if (savedPhotos.Count == 0)
+        {
+            UnityEngine.Debug.LogWarning("No photos to print!");
+            return;
+        }
 
-        Application.OpenURL("file://" + savedPhotos[savedPhotos.Count - 1]);
+        string path = savedPhotos[savedPhotos.Count - 1];
+
+        try
+        {
+            ProcessStartInfo psi = new ProcessStartInfo();
+            psi.FileName = path;
+            psi.Verb = "print";
+            psi.CreateNoWindow = true;
+            psi.WindowStyle = ProcessWindowStyle.Hidden;
+            Process.Start(psi);
+        }
+        catch (System.Exception ex)
+        {
+            UnityEngine.Debug.LogError("Print failed: " + ex.Message);
+        }
+        RestartBooth();
     }
+
 
     // RESTART
     void RestartBooth()
     {
-        capturedPhoto.texture = null;
         qrImage.texture = null;
-
         ShowPanel(startPanel);
     }
 
